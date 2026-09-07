@@ -608,7 +608,14 @@ returns a probability.
   interview questions answered including the hostile ones, and a
   [file-by-file code walkthrough](docs/INTERVIEW_GUIDE.md#18-repository-structure-and-code-walkthrough)
   for "walk me through your code".
+- **[`docs/API_AND_DEPLOYMENT.md`](docs/API_AND_DEPLOYMENT.md)** — serving and deployment
+  from zero, for readers who have never built an API or used Docker. Five layers, each
+  ending with "why not just stop here?", plus line-by-line walkthroughs of the API files,
+  the Dockerfile and the CI workflow.
 - **[`docs/MODEL_CARD.md`](docs/MODEL_CARD.md)** — intended use, training data,
   performance by segment, limitations, ethical considerations.
+- **[`docs/RESUME.md`](docs/RESUME.md)** — paste-ready project titles, resume bullets, a
+  60-second spoken pitch, and an explicit note on which claims the repo supports and which
+  would be overclaiming.
 - **[`notebooks/01_exploratory_data_analysis.ipynb`](notebooks/01_exploratory_data_analysis.ipynb)** —
   executed EDA showing how each cleaning decision was reached.

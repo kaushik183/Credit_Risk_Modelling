@@ -5,7 +5,7 @@ decision in it. That is a normal situation and it is solvable, because **the rea
 this project is real and it is all written down.** The job is to load it into your head in
 the right order.
 
-Total reading: **~100 minutes.** Add the exercises and it is a focused half-day.
+Total reading: **~135 minutes.** Add the exercises and it is a focused half-day.
 
 ---
 
@@ -153,6 +153,17 @@ another tab** and actually send the request. Watching the thing you just read ab
 
 §14.2–14.3: image vs container, what Render actually provides, CI vocabulary.
 
+### 10b. `docs/API_AND_DEPLOYMENT.md` — the deep version · **25 min**
+
+Guide §14 is the summary; **this is the real teaching document** for the part you have
+never done. Five layers, each ending with "why not just stop here?": why a web service
+exists at all → FastAPI, Pydantic, uvicorn and a line-by-line walkthrough of our two API
+files → Docker line by line, including *why* `requirements.txt` is copied before the source
+→ what Render actually gives you → CI vocabulary → C26424's request through all 13 steps.
+
+**Read this if you have time for only one Phase 3 item.** Deployment is where a follow-up
+question is most likely to go deeper than the guide covers.
+
 ### 11. `INTERVIEW_GUIDE.md` §18 — the code walkthrough · **8 min**
 
 For "walk me through your code". File by file, plus §18.13, an honest list of what you
@@ -178,7 +189,15 @@ Shows how each cleaning decision was *reached*, with the outputs already there.
 "What breaks first in production?" → **calibration, before discrimination.** The ranking is
 robust; the probability levels drift as soon as the population shifts.
 
-### 15. Open the actual code · **as long as you have**
+### 15. `docs/RESUME.md` — bullets, pitch, and the honesty line · **8 min**
+
+Paste-ready titles, bullets and a 60-second spoken pitch — **practise that out loud**,
+reading it silently will not surface the sentences you stumble on.
+
+§8 is the part to actually study: a table of what the repo supports versus what would be
+overclaiming, and three sentences that keep you safe if asked "is this real?".
+
+### 16. Open the actual code · **as long as you have**
 
 Read in this order — smallest and most important first:
 `config.py` (93) → `features.py` (270) → `api/schemas.py` (161) → `api/main.py` (233) →
@@ -222,8 +241,8 @@ Being able to name your own gaps is worth more than pretending there are none.
 
 | Gap | Where you would feel it |
 |---|---|
-| **FastAPI internals** | §14 explains the concepts and our usage. It does not make you a FastAPI developer. If pushed on async vs sync, dependency injection, or middleware ordering, say you have used it for this project and would need to read up |
-| **Docker internals** | You can explain image vs container and our Dockerfile. Layer caching, networking, multi-container orchestration — not covered |
+| **FastAPI internals** | `API_AND_DEPLOYMENT.md` covers routing, Pydantic, lifespan, middleware, and async honestly. It does not make you a FastAPI developer — on dependency injection, background tasks or WebSockets, say you have used it for this project and would need to read up |
+| **Docker internals** | Image vs container, our Dockerfile line by line, and layer caching are covered. Networking, volumes and multi-container orchestration are not |
 | **SHAP mathematics** | §12.5 gives intuition, the equation, and verified additivity. The formal derivation of Shapley values is not there |
 | **The data is synthetic** | Never let this be a discovery. Say it first, every time |
 

@@ -9,9 +9,9 @@ FROM python:3.11-slim AS builder
 
 WORKDIR /build
 
-# libgomp is XGBoost's OpenMP runtime. Without it `import xgboost` fails at
-# load time with a dlopen error, which is a confusing way to discover a
-# missing system package - so it is installed explicitly rather than inherited.
+# build-essential provides the C toolchain some wheels need to compile. It is
+# needed only to *install* packages, which is exactly why this is a separate
+# stage - none of it reaches the final image.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -23,7 +23,10 @@ RUN pip install --no-cache-dir --prefix=/install -r requirements-api.txt
 # ---------------------------------------------------------------------------
 FROM python:3.11-slim AS runtime
 
-# libgomp1 is the runtime half of the OpenMP dependency above.
+# libgomp1 is XGBoost's OpenMP runtime. Without it `import xgboost` fails at
+# load time with a dlopen error, which is a confusing way to discover a missing
+# system package - so it is installed explicitly rather than hoped for.
+# curl is here only so HEALTHCHECK below has something to call with.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libgomp1 curl \
     && rm -rf /var/lib/apt/lists/*

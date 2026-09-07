@@ -33,9 +33,11 @@ jobs:
         run: ruff format --check src api tests
         continue-on-error: true
 
-      # The model artifact is not committed, so CI trains a fast version of it
-      # before the API tests run. 5 Optuna trials is enough to exercise every
-      # code path; it is not meant to reproduce the tuned model.
+      # models/ IS committed, so the API tests would pass without this. We train
+      # anyway, with 5 Optuna trials instead of 40, because it exercises the whole
+      # training path on every push - that is how we find out a data or feature
+      # change broke training before it silently ships a stale model. It is not
+      # meant to reproduce the tuned artifact.
       - name: Train a smoke-test model
         run: python -m src.train --trials 5 --skip-shap
 
