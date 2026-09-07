@@ -1,0 +1,561 @@
+{
+  "model_version": "1.0.0",
+  "trained_at": "2026-09-07T06:54:52+00:00",
+  "training_duration_seconds": 156.5,
+  "python_version": "3.11.2",
+  "random_seed": 42,
+  "algorithm": "XGBClassifier + isotonic calibration, wrapped in a sklearn Pipeline",
+  "raw_input_columns": [
+    "age",
+    "income",
+    "number_of_dependants",
+    "years_at_current_address",
+    "sanction_amount",
+    "loan_amount",
+    "loan_tenure_months",
+    "bank_balance_at_application",
+    "number_of_open_accounts",
+    "number_of_closed_accounts",
+    "total_loan_months",
+    "delinquent_months",
+    "total_dpd",
+    "enquiry_count",
+    "credit_utilization_ratio",
+    "marital_status",
+    "employment_status",
+    "residence_type",
+    "loan_purpose",
+    "loan_type"
+  ],
+  "feature_columns": [
+    "loan_to_income",
+    "emi_to_monthly_income",
+    "loan_to_sanction",
+    "balance_to_loan",
+    "months_of_income_in_bank",
+    "income_per_dependant",
+    "delinquency_ratio",
+    "avg_dpd_per_delinquency",
+    "credit_utilization_ratio",
+    "open_account_ratio",
+    "total_accounts",
+    "enquiry_count",
+    "loan_tenure_months",
+    "total_loan_months",
+    "age",
+    "years_at_current_address",
+    "number_of_dependants",
+    "marital_status",
+    "employment_status",
+    "residence_type",
+    "loan_purpose",
+    "loan_type"
+  ],
+  "categorical_features": [
+    "marital_status",
+    "employment_status",
+    "residence_type",
+    "loan_purpose",
+    "loan_type"
+  ],
+  "numeric_features": [
+    "loan_to_income",
+    "emi_to_monthly_income",
+    "loan_to_sanction",
+    "balance_to_loan",
+    "months_of_income_in_bank",
+    "income_per_dependant",
+    "delinquency_ratio",
+    "avg_dpd_per_delinquency",
+    "credit_utilization_ratio",
+    "open_account_ratio",
+    "total_accounts",
+    "enquiry_count",
+    "loan_tenure_months",
+    "total_loan_months",
+    "age",
+    "years_at_current_address",
+    "number_of_dependants"
+  ],
+  "excluded_columns": {
+    "cust_id": "identifier",
+    "loan_id": "identifier",
+    "zipcode": "no signal + fair-lending proxy risk",
+    "city": "no signal + fair-lending proxy risk",
+    "state": "no signal + fair-lending proxy risk",
+    "gender": "protected characteristic - excluded from features, retained for fairness auditing",
+    "principal_outstanding": "post-disbursal (mid-repayment balance)",
+    "processing_fee": "post-approval, and exactly 2% of loan_amount",
+    "gst": "post-approval, and exactly 18% of loan_amount",
+    "net_disbursement": "post-approval, and exactly 80% of loan_amount",
+    "installment_start_dt": "post-approval",
+    "disbursal_date": "used only to build the out-of-time split, not a feature"
+  },
+  "best_params": {
+    "max_depth": 3,
+    "learning_rate": 0.061352264428705984,
+    "subsample": 0.7048891529150858,
+    "colsample_bytree": 0.9971604647970944,
+    "min_child_weight": 13,
+    "gamma": 3.928375027246365,
+    "reg_lambda": 0.5354098352122859,
+    "reg_alpha": 0.029065234607670985,
+    "n_estimators": 1200
+  },
+  "scale_pos_weight": 10.633643617021276,
+  "best_iteration": 612,
+  "n_optuna_trials": 40,
+  "cleaning_report": {
+    "rows_in": 50000,
+    "rows_out": 49992,
+    "loan_purpose_typos_fixed": 22,
+    "residence_type_nulls_filled": 62,
+    "zero_amount_rows_dropped": 8,
+    "processing_fee_rows_repaired": 7,
+    "identity_violations_before": 7,
+    "identity_violations_after": 0,
+    "duplicate_rows_dropped": 0,
+    "notes": [
+      "gst / processing_fee / net_disbursement are exact linear functions of loan_amount (18% / 2% / 80%) and carry zero independent information; they are excluded from the feature set as post-approval columns anyway.",
+      "city, state and zipcode are low cardinality (10 / 9 / 10) and their default rates are flat (8.1%-9.1%); they are dropped for lack of signal and to avoid geography-based proxy discrimination."
+    ]
+  },
+  "dataset": {
+    "rows_after_cleaning": 49992,
+    "base_default_rate": 0.08595375260041607,
+    "train_rows": 34994,
+    "val_rows": 7499,
+    "test_rows": 7499,
+    "date_min": "2019-07-24",
+    "date_max": "2024-07-22",
+    "oot_cutoff": "2023-07-23",
+    "oot_viable": true,
+    "oot_test_rows": 10015
+  },
+  "metrics": {
+    "baseline_logistic_test": {
+      "roc_auc": 0.9833888307487393,
+      "pr_auc": 0.8597626931539913,
+      "gini": 0.9667776614974786,
+      "ks": 88.13551336241851,
+      "brier": 0.05377816403668132,
+      "base_rate": 0.08587811708227763,
+      "n": 7499
+    },
+    "xgboost_raw_test": {
+      "roc_auc": 0.9888230470572779,
+      "pr_auc": 0.9009488237067046,
+      "gini": 0.9776460941145557,
+      "ks": 90.74998527619591,
+      "brier": 0.03805062720589236,
+      "base_rate": 0.08587811708227763,
+      "n": 7499
+    },
+    "xgboost_calibrated_test": {
+      "roc_auc": 0.9885411428390213,
+      "pr_auc": 0.8861811049538725,
+      "gini": 0.9770822856780426,
+      "ks": 90.29776062265836,
+      "brier": 0.023984159817002318,
+      "base_rate": 0.08587811708227763,
+      "n": 7499
+    },
+    "out_of_time_test": {
+      "roc_auc": 0.9855450168874675,
+      "pr_auc": 0.8758652773958102,
+      "gini": 0.9710900337749351,
+      "ks": 90.3983011324597,
+      "brier": 0.024271026158006866,
+      "base_rate": 0.08577134298552172,
+      "n": 10015
+    }
+  },
+  "threshold": {
+    "value": 0.08,
+    "chosen_on": "validation set",
+    "cost_false_negative": 0.6,
+    "cost_false_positive": 0.06,
+    "test_metrics_at_threshold": {
+      "threshold": 0.08,
+      "tn": 6409,
+      "fp": 446,
+      "fn": 24,
+      "tp": 620,
+      "precision": 0.5816135084427767,
+      "recall": 0.9627329192546584,
+      "f1": 0.7251461988304093,
+      "approval_rate": 0.8578477130284038,
+      "bad_rate_in_approved": 0.003730763251981968,
+      "default_capture_rate": 0.9627329192546584
+    },
+    "test_metrics_at_0.5": {
+      "threshold": 0.5,
+      "tn": 6772,
+      "fp": 83,
+      "fn": 171,
+      "tp": 473,
+      "precision": 0.8507194244604317,
+      "recall": 0.734472049689441,
+      "f1": 0.7883333333333333,
+      "approval_rate": 0.9258567809041206,
+      "bad_rate_in_approved": 0.02462912285755437,
+      "default_capture_rate": 0.734472049689441
+    }
+  },
+  "leakage_ablation": {
+    "application_time_auc": 0.9888230470572779,
+    "with_principal_outstanding_auc": 0.988684643298857,
+    "auc_inflation": -0.0001384037584208908
+  },
+  "rank_ordering_monotone": true,
+  "imbalance_comparison": [
+    {
+      "strategy": "none (raw 8.6% positives)",
+      "roc_auc": 0.9889375976909314,
+      "pr_auc": 0.899109744926454,
+      "ks": 91.84594295641317,
+      "brier": 0.023894626110249013,
+      "n": 7499
+    },
+    {
+      "strategy": "scale_pos_weight=10.63",
+      "roc_auc": 0.9887055145753173,
+      "pr_auc": 0.8989766197579353,
+      "ks": 91.25673233306868,
+      "brier": 0.03622510823205846,
+      "n": 7499
+    },
+    {
+      "strategy": "random undersampling (n=6016, 28978 good loans discarded)",
+      "roc_auc": 0.9874878699248785,
+      "pr_auc": 0.8895547426507625,
+      "ks": 91.43726404317741,
+      "brier": 0.048469869391614614,
+      "n": 7499
+    }
+  ],
+  "calibration_method": "isotonic",
+  "calibration_comparison": [
+    {
+      "method": "none (raw XGBoost)",
+      "roc_auc": 0.9888230470572779,
+      "pr_auc": 0.9009488237067046,
+      "ks": 90.74998527619591,
+      "brier": 0.03805062720589236,
+      "ece": 0.047891992361383216,
+      "selected": false
+    },
+    {
+      "method": "isotonic",
+      "roc_auc": 0.9885411428390213,
+      "pr_auc": 0.8861811049538725,
+      "ks": 90.29776062265836,
+      "brier": 0.023984159817002318,
+      "ece": 0.006339946426468593,
+      "selected": true
+    },
+    {
+      "method": "sigmoid (Platt)",
+      "roc_auc": 0.9888230470572779,
+      "pr_auc": 0.9009488237067047,
+      "ks": 90.74998527619591,
+      "brier": 0.026157248498424646,
+      "ece": 0.015900842251114777,
+      "selected": false
+    }
+  ],
+  "score_bimodality_note": "Both calibrators place ~84% of the test book at the extremes of the 300-900 range. That concentration is a property of this dataset - the target is nearly a deterministic function of credit_utilization_ratio and delinquency_ratio - not an artefact of the calibration choice.",
+  "psi_train_vs_test_max": 0.0036130553884122637,
+  "psi_intime_vs_oot_max": 0.0023362349431270838,
+  "top_features_by_shap": [
+    {
+      "feature": "credit_utilization_ratio",
+      "mean_abs_shap": 4.938241004943848
+    },
+    {
+      "feature": "delinquency_ratio",
+      "mean_abs_shap": 2.3046865463256836
+    },
+    {
+      "feature": "loan_to_income",
+      "mean_abs_shap": 1.4313277006149292
+    },
+    {
+      "feature": "residence_type_Owned",
+      "mean_abs_shap": 0.9784058332443237
+    },
+    {
+      "feature": "residence_type_Rented",
+      "mean_abs_shap": 0.7252114415168762
+    },
+    {
+      "feature": "avg_dpd_per_delinquency",
+      "mean_abs_shap": 0.6105835437774658
+    },
+    {
+      "feature": "enquiry_count",
+      "mean_abs_shap": 0.4939882755279541
+    },
+    {
+      "feature": "balance_to_loan",
+      "mean_abs_shap": 0.3633996248245239
+    },
+    {
+      "feature": "loan_purpose_Auto",
+      "mean_abs_shap": 0.325025349855423
+    },
+    {
+      "feature": "loan_tenure_months",
+      "mean_abs_shap": 0.2577785551548004
+    },
+    {
+      "feature": "income_per_dependant",
+      "mean_abs_shap": 0.2548523545265198
+    },
+    {
+      "feature": "loan_to_sanction",
+      "mean_abs_shap": 0.2486841082572937
+    },
+    {
+      "feature": "age",
+      "mean_abs_shap": 0.2234210968017578
+    },
+    {
+      "feature": "total_loan_months",
+      "mean_abs_shap": 0.11624989658594131
+    },
+    {
+      "feature": "emi_to_monthly_income",
+      "mean_abs_shap": 0.10693853348493576
+    }
+  ],
+  "slice_metrics": {
+    "gender": [
+      {
+        "segment": "M",
+        "n": 4515,
+        "base_rate": 0.08394241417497232,
+        "roc_auc": 0.9901661452565287,
+        "approval_rate": 0.8644518272425249,
+        "recall": 0.9656992084432717,
+        "precision": 0.5980392156862745,
+        "mean_pd": 0.08615317009317205
+      },
+      {
+        "segment": "F",
+        "n": 2984,
+        "base_rate": 0.08880697050938338,
+        "roc_auc": 0.985941696100814,
+        "approval_rate": 0.8478552278820375,
+        "recall": 0.9584905660377359,
+        "precision": 0.5594713656387665,
+        "mean_pd": 0.09274676566957259
+      }
+    ],
+    "employment_status": [
+      {
+        "segment": "Self-Employed",
+        "n": 4847,
+        "base_rate": 0.08376315246544254,
+        "roc_auc": 0.9888610717641148,
+        "approval_rate": 0.8607386011966165,
+        "recall": 0.958128078817734,
+        "precision": 0.5762962962962963,
+        "mean_pd": 0.0860170075729065
+      },
+      {
+        "segment": "Salaried",
+        "n": 2652,
+        "base_rate": 0.08974358974358974,
+        "roc_auc": 0.988078122715532,
+        "approval_rate": 0.8525641025641025,
+        "recall": 0.9705882352941176,
+        "precision": 0.5907928388746803,
+        "mean_pd": 0.09382106939019554
+      }
+    ],
+    "loan_purpose": [
+      {
+        "segment": "Personal",
+        "n": 2584,
+        "base_rate": 0.04760061919504644,
+        "roc_auc": 0.9886555468561593,
+        "approval_rate": 0.9109907120743034,
+        "recall": 0.926829268292683,
+        "precision": 0.4956521739130435,
+        "mean_pd": 0.047887995980222975
+      },
+      {
+        "segment": "Home",
+        "n": 2302,
+        "base_rate": 0.15377932232841007,
+        "roc_auc": 0.9843429158110883,
+        "approval_rate": 0.763249348392702,
+        "recall": 0.9689265536723164,
+        "precision": 0.6293577981651376,
+        "mean_pd": 0.158537333275715
+      },
+      {
+        "segment": "Auto",
+        "n": 1481,
+        "base_rate": 0.03848750844024308,
+        "roc_auc": 0.9934826532623693,
+        "approval_rate": 0.925050641458474,
+        "recall": 0.9824561403508771,
+        "precision": 0.5045045045045045,
+        "mean_pd": 0.040791268501013195
+      },
+      {
+        "segment": "Education",
+        "n": 1132,
+        "base_rate": 0.09717314487632508,
+        "roc_auc": 0.985905532823341,
+        "approval_rate": 0.8409893992932862,
+        "recall": 0.9727272727272728,
+        "precision": 0.5944444444444444,
+        "mean_pd": 0.10303049493381958
+      }
+    ],
+    "residence_type": [
+      {
+        "segment": "Owned",
+        "n": 4269,
+        "base_rate": 0.057390489576013115,
+        "roc_auc": 0.992251085324786,
+        "approval_rate": 0.8978683532443195,
+        "recall": 0.9877551020408163,
+        "precision": 0.555045871559633,
+        "mean_pd": 0.0582865382749548
+      },
+      {
+        "segment": "Mortgage",
+        "n": 1777,
+        "base_rate": 0.09229037703995498,
+        "roc_auc": 0.9868673733234543,
+        "approval_rate": 0.842993809791784,
+        "recall": 0.9573170731707317,
+        "precision": 0.5627240143369175,
+        "mean_pd": 0.09986482889846923
+      },
+      {
+        "segment": "Rented",
+        "n": 1441,
+        "base_rate": 0.16238723108952116,
+        "roc_auc": 0.979769011252027,
+        "approval_rate": 0.7571131158917418,
+        "recall": 0.9401709401709402,
+        "precision": 0.6285714285714286,
+        "mean_pd": 0.16545657703645222
+      },
+      {
+        "segment": "Unknown",
+        "n": 12,
+        "base_rate": 0.08333333333333333,
+        "roc_auc": 1.0,
+        "approval_rate": 0.9166666666666666,
+        "recall": 1.0,
+        "precision": 1.0,
+        "mean_pd": 0.08582928089890629
+      }
+    ],
+    "loan_type": [
+      {
+        "segment": "Secured",
+        "n": 4915,
+        "base_rate": 0.10600203458799592,
+        "roc_auc": 0.9878112012804059,
+        "approval_rate": 0.8299084435401831,
+        "recall": 0.9712092130518234,
+        "precision": 0.6052631578947368,
+        "mean_pd": 0.11027371925041307
+      },
+      {
+        "segment": "Unsecured",
+        "n": 2584,
+        "base_rate": 0.04760061919504644,
+        "roc_auc": 0.9886555468561593,
+        "approval_rate": 0.9109907120743034,
+        "recall": 0.926829268292683,
+        "precision": 0.4956521739130435,
+        "mean_pd": 0.047887995980222975
+      }
+    ],
+    "marital_status": [
+      {
+        "segment": "Married",
+        "n": 4119,
+        "base_rate": 0.07938820101966497,
+        "roc_auc": 0.987522016413115,
+        "approval_rate": 0.8640446710366594,
+        "recall": 0.9541284403669725,
+        "precision": 0.5571428571428572,
+        "mean_pd": 0.08381750846858665
+      },
+      {
+        "segment": "Single",
+        "n": 3380,
+        "base_rate": 0.09378698224852071,
+        "roc_auc": 0.9896515961856739,
+        "approval_rate": 0.8502958579881656,
+        "recall": 0.9716088328075709,
+        "precision": 0.6086956521739131,
+        "mean_pd": 0.09482059004336331
+      }
+    ]
+  },
+  "prediction_fixture": {
+    "payload": {
+      "age": 34,
+      "income": 2845000,
+      "number_of_dependants": 4,
+      "years_at_current_address": 13,
+      "sanction_amount": 11351000,
+      "loan_amount": 10721000,
+      "loan_tenure_months": 43,
+      "bank_balance_at_application": 1416190,
+      "number_of_open_accounts": 2,
+      "number_of_closed_accounts": 1,
+      "total_loan_months": 41,
+      "delinquent_months": 0,
+      "total_dpd": 0,
+      "enquiry_count": 5,
+      "credit_utilization_ratio": 30,
+      "marital_status": "Married",
+      "employment_status": "Self-Employed",
+      "residence_type": "Owned",
+      "loan_purpose": "Home",
+      "loan_type": "Secured"
+    },
+    "expected_probability": 0.0001,
+    "expected_credit_score": 900
+  },
+  "score_mapping": {
+    "range": [
+      300,
+      900
+    ],
+    "formula": "score = 300 + (1 - PD) * 600",
+    "bands": [
+      {
+        "min": 300,
+        "max": 500,
+        "label": "Poor"
+      },
+      {
+        "min": 500,
+        "max": 650,
+        "label": "Average"
+      },
+      {
+        "min": 650,
+        "max": 750,
+        "label": "Good"
+      },
+      {
+        "min": 750,
+        "max": 901,
+        "label": "Excellent"
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "age": 42,
+  "income": 2400000,
+  "number_of_dependants": 1,
+  "years_at_current_address": 12,
+  "marital_status": "Married",
+  "employment_status": "Salaried",
+  "residence_type": "Owned",
+  "loan_purpose": "Auto",
+  "loan_type": "Secured",
+  "sanction_amount": 900000,
+  "loan_amount": 700000,
+  "loan_tenure_months": 24,
+  "bank_balance_at_application": 650000,
+  "number_of_open_accounts": 2,
+  "number_of_closed_accounts": 3,
+  "total_loan_months": 96,
+  "delinquent_months": 0,
+  "total_dpd": 0,
+  "enquiry_count": 2,
+  "credit_utilization_ratio": 12
+}

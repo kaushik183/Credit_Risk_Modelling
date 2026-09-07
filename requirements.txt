@@ -1,0 +1,24 @@
+# Pinned exactly so a clean install reproduces the artifacts in models/.
+# Verified against Python 3.11.
+
+# --- data & modelling ---
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+xgboost==2.1.4
+optuna==4.1.0
+shap==0.46.0
+joblib==1.4.2
+
+# --- plots ---
+matplotlib==3.9.2
+seaborn==0.13.2
+
+# --- API ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+
+# --- tests ---
+pytest==8.3.4
+httpx==0.28.1

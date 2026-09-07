@@ -1,0 +1,16 @@
+# Serving-only dependencies.
+#
+# The container does not train, so it does not need Optuna, SHAP, matplotlib
+# or seaborn. Leaving them out roughly halves the image and removes a large
+# amount of code from the attack surface of a public service.
+#
+# scikit-learn, xgboost, numpy and pandas MUST match the training versions
+# exactly: a joblib artifact is not guaranteed to load across versions.
+numpy==1.26.4
+pandas==2.2.3
+scikit-learn==1.5.2
+xgboost==2.1.4
+joblib==1.4.2
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4

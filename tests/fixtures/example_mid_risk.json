@@ -1,0 +1,22 @@
+{
+  "age": 24,
+  "income": 380000,
+  "number_of_dependants": 1,
+  "years_at_current_address": 17,
+  "sanction_amount": 796000,
+  "loan_amount": 683000,
+  "loan_tenure_months": 51,
+  "bank_balance_at_application": 113045,
+  "number_of_open_accounts": 1,
+  "number_of_closed_accounts": 1,
+  "total_loan_months": 60,
+  "delinquent_months": 9,
+  "total_dpd": 40,
+  "enquiry_count": 1,
+  "credit_utilization_ratio": 85,
+  "marital_status": "Single",
+  "employment_status": "Salaried",
+  "residence_type": "Owned",
+  "loan_purpose": "Education",
+  "loan_type": "Secured"
+}

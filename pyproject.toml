@@ -1,0 +1,28 @@
+[project]
+name = "credit-risk-model"
+version = "1.0.0"
+description = "Application-time credit default risk scorecard with a FastAPI serving layer"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::FutureWarning",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+exclude = [".venv", "notebooks", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = [
+    "E501",   # long lines are allowed; the explanatory comments are the point
+    "B008",   # FastAPI's Depends() in defaults is idiomatic
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]

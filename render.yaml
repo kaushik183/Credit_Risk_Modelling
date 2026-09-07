@@ -1,0 +1,17 @@
+# Render blueprint. Deploy with: New -> Blueprint -> point at this repo.
+services:
+  - type: web
+    name: credit-risk-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # The free tier gives 512 MB RAM. Two uvicorn workers each load their
+      # own copy of the ~150 KB model, which fits comfortably; raise this on
+      # a paid plan with more memory.
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: PYTHONUNBUFFERED
+        value: "1"

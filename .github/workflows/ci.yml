@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Lint and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff
+
+      - name: Lint
+        run: ruff check src api tests
+
+      - name: Format check
+        run: ruff format --check src api tests
+        continue-on-error: true
+
+      # The model artifact is not committed, so CI trains a fast version of it
+      # before the API tests run. 5 Optuna trials is enough to exercise every
+      # code path; it is not meant to reproduce the tuned model.
+      - name: Train a smoke-test model
+        run: python -m src.train --trials 5 --skip-shap
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+      - name: Upload training artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-and-reports
+          path: |
+            models/
+            reports/
+          retention-days: 7
+
+  docker:
+    name: Build and smoke-test the image
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      # The image expects models/ to exist; build it the same way CI did above.
+      - name: Produce a model for the image
+        run: |
+          pip install -r requirements.txt
+          python -m src.train --trials 5 --skip-shap
+
+      - name: Build the image
+        run: docker build -t credit-risk-api:ci .
+
+      - name: Boot it and check /health and /predict
+        run: |
+          docker run -d --name api -p 8000:8000 credit-risk-api:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/health; then break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:8000/health | grep '"model_loaded":true'
+          curl -fsS -X POST http://localhost:8000/predict \
+            -H 'Content-Type: application/json' \
+            -d @tests/fixtures/example_applicant.json | grep probability_of_default
+          docker logs api
+          docker rm -f api
