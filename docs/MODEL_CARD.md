@@ -3,6 +3,10 @@
 **Version** 1.0.0 · **Type** Binary classifier (XGBoost + isotonic calibration) ·
 **Seed** 42 · **License / status** Portfolio project, **not approved for production use**
 
+**Deployed at** [https://credit-risk-api-1dbj.onrender.com/docs](https://credit-risk-api-1dbj.onrender.com/docs) — a public, unauthenticated demo endpoint. It is a
+demonstration of the serving architecture, **not a lending service**; see §1 and §6.1 for
+why its output must not inform a real credit decision.
+
 ---
 
 ## 1. Intended use

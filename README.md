@@ -1,8 +1,15 @@
 # Credit Default Risk Model
 
+**Live API: [https://credit-risk-api-1dbj.onrender.com/docs](https://credit-risk-api-1dbj.onrender.com/docs)**
+
 An end-to-end credit scorecard: it takes a loan application, and returns the probability
 that the borrower will default, a 300–900 credit score, and an approve/decline
 recommendation.
+
+```bash
+curl https://credit-risk-api-1dbj.onrender.com/health
+# {"status":"ok","model_loaded":true,"model_version":"1.0.0","uptime_seconds":88.1}
+```
 
 Everything is built to be **defensible**, not just accurate — every cleaning decision,
 every feature, and every excluded column has a written reason, and the numbers below are
@@ -211,7 +218,7 @@ Interactive docs at `/docs`. All examples below are **real, copy-pasteable respo
 ### `POST /predict`
 
 ```bash
-curl -s -X POST http://localhost:8000/predict \
+curl -s -X POST https://credit-risk-api-1dbj.onrender.com/predict \
   -H 'Content-Type: application/json' \
   -d '{
     "age": 24, "income": 380000, "number_of_dependants": 1,
@@ -251,7 +258,7 @@ A low-risk applicant (`tests/fixtures/example_applicant.json`) returns:
 ### `POST /predict/batch`
 
 ```bash
-curl -s -X POST http://localhost:8000/predict/batch \
+curl -s -X POST https://credit-risk-api-1dbj.onrender.com/predict/batch \
   -H 'Content-Type: application/json' \
   -d @tests/fixtures/example_batch.json
 ```
@@ -286,7 +293,7 @@ and its cost assumption, and the leakage-ablation result.
 Bad input returns **422 with a readable message**, never a 500:
 
 ```bash
-curl -s -X POST http://localhost:8000/predict -H 'Content-Type: application/json' -d '{"age": 15, ...}'
+curl -s -X POST https://credit-risk-api-1dbj.onrender.com/predict -H 'Content-Type: application/json' -d '{"age": 15, ...}'
 ```
 
 ```json
@@ -306,11 +313,18 @@ Measured locally, 300 requests after warm-up:
 
 | | p50 | p95 | p99 |
 |---|---|---|---|
-| `POST /predict` | 3.62 ms | 3.83 ms | 4.32 ms |
+| `POST /predict`, in-process | 3.62 ms | 3.83 ms | 4.32 ms |
+| `POST /predict`, live on Render | 388 ms | 806 ms | — |
 
 Batching amortises the overhead: 1,000 applicants in **12.6 ms total** (0.013 ms each).
 The model is loaded once in a lifespan handler; loading it per request would dominate this
 budget entirely.
+
+The ~385 ms gap on the deployed service is **network and platform, not the model** —
+TLS handshake, Render's router, and a free-tier shared CPU an ocean away. The in-process
+figure is the one that describes the model; the deployed figure is what a caller in
+another region actually experiences. On a paid instance in the caller's own region you
+would expect this to land in the tens of milliseconds.
 
 ---
 
@@ -525,8 +539,8 @@ The remaining steps need a browser and your Render account:
 
 5. **Verify** (substitute the hostname Render assigns):
    ```bash
-   curl https://credit-risk-api.onrender.com/health
-   curl -X POST https://credit-risk-api.onrender.com/predict \
+   curl https://credit-risk-api-1dbj.onrender.com/health
+   curl -X POST https://credit-risk-api-1dbj.onrender.com/predict \
      -H 'Content-Type: application/json' -d @tests/fixtures/example_mid_risk.json
    ```
    Expected, matching local and container output exactly:
@@ -535,8 +549,11 @@ The remaining steps need a browser and your Render account:
     "decision":"decline","threshold":0.08,"model_version":"1.0.0"}
    ```
 
-6. **Live URL:** _paste it here once step 3 finishes._
-   `https://<service>.onrender.com/docs`
+6. **Live URL:** **[https://credit-risk-api-1dbj.onrender.com/docs](https://credit-risk-api-1dbj.onrender.com/docs)** ✅ deployed and verified.
+
+   Note the `-1dbj` suffix: `credit-risk-api.onrender.com` is already taken by another
+   Render user, so the platform appended a random discriminator to the service name in
+   `render.yaml`. Expect a different suffix if you redeploy from scratch.
 
 Free-tier caveat: the instance sleeps after 15 minutes idle, so the first request after a
 nap takes 30–50 seconds. Every subsequent one is back to the ~4 ms above.
