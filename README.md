@@ -584,8 +584,10 @@ returns a probability.
 
 - **[`docs/INTERVIEW_GUIDE.md`](docs/INTERVIEW_GUIDE.md)** — the full walkthrough: how
   gradient boosting works in plain words, every hyperparameter and which way it pushes
-  bias/variance, every metric defined with the actual number, the leakage story, and ~20
-  interview questions answered, including the hostile ones.
+  bias/variance, every metric defined with the actual number, the leakage story, ~20
+  interview questions answered including the hostile ones, and a
+  [file-by-file code walkthrough](docs/INTERVIEW_GUIDE.md#18-repository-structure-and-code-walkthrough)
+  for "walk me through your code".
 - **[`docs/MODEL_CARD.md`](docs/MODEL_CARD.md)** — intended use, training data,
   performance by segment, limitations, ethical considerations.
 - **[`notebooks/01_exploratory_data_analysis.ipynb`](notebooks/01_exploratory_data_analysis.ipynb)** —
