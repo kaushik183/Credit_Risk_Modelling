@@ -180,7 +180,8 @@ data/raw/        the three source CSVs
 ## Quickstart
 
 ```bash
-git clone <this-repo> && cd Credit_Risk_Modelling
+git clone https://github.com/kaushik183/Credit_Risk_Modelling.git
+cd Credit_Risk_Modelling
 
 python3.11 -m venv .venv
 source .venv/bin/activate
@@ -497,37 +498,45 @@ every push.
 
 ### Deploying to Render
 
-Steps 1–4 need a browser and your account, so they are yours to do:
+**Step 1 is done** — the repo is at
+[`kaushik183/Credit_Risk_Modelling`](https://github.com/kaushik183/Credit_Risk_Modelling)
+(private), CI is green, and `models/model.joblib` (145 KB) plus `models/metadata.json` are
+committed on purpose: the image copies them in, and Render does not train.
 
-1. **Push the repo to GitHub.**
-   ```bash
-   git add -A
-   git commit -m "Credit default risk model: training pipeline, API, tests, docs"
-   git push origin main
+The remaining steps need a browser and your Render account:
+
+1. **Sign in** at [dashboard.render.com](https://dashboard.render.com). Use *Sign in with
+   GitHub* — the repo is private, so Render needs GitHub authorisation to read it.
+
+2. **Grant repo access.** On first sign-in Render asks which repositories it may see.
+   Choose *Only select repositories* → `Credit_Risk_Modelling`. Without this the blueprint
+   step will not list the repo.
+
+3. **New → Blueprint**, pick `Credit_Risk_Modelling`, confirm. Render reads `render.yaml`
+   and provisions a free Docker web service called `credit-risk-api`. No other
+   configuration is needed — no environment variables, no build command.
+
+4. **Wait ~5 minutes** for the first build. In the log, look for:
    ```
-   `models/model.joblib` (~150 KB) and `models/metadata.json` are committed on purpose —
-   the image copies them in, and Render does not train.
+   {"event": "startup", "model_version": "1.0.0", "threshold": 0.08, "load_seconds": 0.04}
+   ```
+   That line means the model loaded. If it is absent and the service exited, the app did
+   that deliberately — see the "fails loudly" note above.
 
-2. **Sign in** at [dashboard.render.com](https://dashboard.render.com) (GitHub login is
-   easiest).
-
-3. **New → Blueprint**, pick this repository, and confirm. Render reads `render.yaml` and
-   provisions a free Docker web service named `credit-risk-api`.
-
-4. **Wait ~5 minutes** for the first build. Watch the log for
-   `{"event": "startup", "model_version": "1.0.0", ...}` — that line means the model
-   loaded. If it is missing, the app exited on purpose because the artifact was not there.
-
-5. **Verify:**
+5. **Verify** (substitute the hostname Render assigns):
    ```bash
    curl https://credit-risk-api.onrender.com/health
    curl -X POST https://credit-risk-api.onrender.com/predict \
-     -H 'Content-Type: application/json' -d @tests/fixtures/example_applicant.json
+     -H 'Content-Type: application/json' -d @tests/fixtures/example_mid_risk.json
+   ```
+   Expected, matching local and container output exactly:
+   ```json
+   {"probability_of_default":0.357143,"credit_score":686,"rating":"Good",
+    "decision":"decline","threshold":0.08,"model_version":"1.0.0"}
    ```
 
-6. **Live URL:** `https://credit-risk-api.onrender.com/docs`
-   — _fill this in once step 3 completes; I could not deploy it for you because it needs
-   your Render login._
+6. **Live URL:** _paste it here once step 3 finishes._
+   `https://<service>.onrender.com/docs`
 
 Free-tier caveat: the instance sleeps after 15 minutes idle, so the first request after a
 nap takes 30–50 seconds. Every subsequent one is back to the ~4 ms above.
