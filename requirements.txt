@@ -19,6 +19,18 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
 
-# --- tests ---
+# --- tests & lint ---
+# ruff is pinned because CI fails the build on lint errors: an unpinned ruff
+# means a new release with new default rules can turn CI red with no code
+# change on our side.
 pytest==8.3.4
 httpx==0.28.1
+ruff==0.16.6
+
+# --- notebooks ---
+# Required to open or re-execute notebooks/01_exploratory_data_analysis.ipynb.
+# Not needed to train the model or serve the API - see requirements-api.txt for
+# the much smaller set the container actually installs.
+jupyterlab==4.5.2
+ipykernel==7.3.0
+nbconvert==7.17.1

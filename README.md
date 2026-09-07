@@ -192,6 +192,8 @@ brew install libomp
 python -m src.train              # ~3 minutes, writes models/ and reports/
 pytest tests/ -q                 # 65 tests
 uvicorn api.main:app --reload    # http://localhost:8000/docs
+
+jupyter lab notebooks/           # optional: the EDA notebook
 ```
 
 `python -m src.train --trials 5 --skip-shap` runs in ~20 seconds if you just want
@@ -486,11 +488,12 @@ the builder, the runtime installs only `requirements-api.txt` (no Optuna, SHAP,
 matplotlib or seaborn — roughly half the image and far less attack surface), runs as
 non-root uid 10001, and has a `HEALTHCHECK` against `/health`.
 
-> **Verification status.** The Docker daemon was not running on the build machine, so the
-> image itself is **unbuilt and untested**. What *was* verified: the API boots and serves
-> correct predictions from a clean virtualenv containing only `requirements-api.txt` — so
-> the container's dependency contract is confirmed even though the image is not. The CI
-> workflow builds the image and smoke-tests `/health` and `/predict` on every push.
+**Verified.** The image builds (585 MB), boots, and reaches Docker `healthy` within 10
+seconds. Inside the container: `id` reports `uid=10001(appuser)`, two uvicorn workers each
+log a `startup` line, `/health` returns `"model_loaded": true`, bad input returns 422, and
+`/predict` returns **exactly** the same probability as the local process — confirming the
+serialized pipeline survives the container boundary. CI rebuilds and re-smoke-tests it on
+every push.
 
 ### Deploying to Render
 
@@ -529,12 +532,13 @@ Steps 1–4 need a browser and your account, so they are yours to do:
 Free-tier caveat: the instance sleeps after 15 minutes idle, so the first request after a
 nap takes 30–50 seconds. Every subsequent one is back to the ~4 ms above.
 
-**To run it locally instead** (once Docker is running):
+**To run it locally:**
 
 ```bash
 docker build -t credit-risk-api .
 docker run -p 8000:8000 credit-risk-api
 curl http://localhost:8000/health
+# {"status":"ok","model_loaded":true,"model_version":"1.0.0","uptime_seconds":1.1}
 ```
 
 **Fly.io** as an alternative: `fly launch --dockerfile Dockerfile` then `fly deploy`; it
