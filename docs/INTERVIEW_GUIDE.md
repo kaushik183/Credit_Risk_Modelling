@@ -5,6 +5,7 @@ comes from `models/metadata.json` or `reports/tables/`.
 
 **Contents**
 
+0. [Terms, and the applicant we follow throughout](#0-before-anything-else-terms-and-one-applicant-we-follow-all-the-way-through)
 1. [The problem in one paragraph](#1-the-problem-in-one-paragraph)
 2. [The data](#2-the-data)
 3. [Cleaning decisions](#3-cleaning-decisions)
@@ -17,12 +18,94 @@ comes from `models/metadata.json` or `reports/tables/`.
 10. [Calibration](#10-calibration)
 11. [The leakage story](#11-the-leakage-story)
 12. [Why is the AUC so high?](#why-is-the-auc-so-high)
+12.5 [SHAP, from zero — and C26424's explanation](#125-shap-from-zero--and-applicant-c26424s-explanation)
 13. [Threshold selection](#13-threshold-selection)
 14. [Serving architecture](#14-serving-architecture)
 15. [Monitoring](#15-monitoring)
 16. [Weaknesses and next steps](#16-weaknesses-and-next-steps)
 17. [**Q&A — 20 interview questions**](#17-qa--20-interview-questions)
 18. [Repository structure and code walkthrough](#18-repository-structure-and-code-walkthrough)
+
+---
+
+## 0. Before anything else: terms, and one applicant we follow all the way through
+
+This guide is written to stand alone. Every term is defined where it first appears, and
+every acronym is expanded every time, so you never have to hold a glossary in your head.
+
+### 0.1 The vocabulary, in one plain line each
+
+**Credit terms**
+
+| Term | Plain meaning |
+|---|---|
+| **Default** | The borrower stopped paying. In this dataset it is a true/false flag; the exact definition (90 days late? written off?) is not documented, which is a real limitation |
+| **Delinquent** | Behind on payments, but not yet declared in default |
+| **DPD (days past due)** | How many days late a payment is. `total_dpd` is the cumulative count across a borrower's history |
+| **Credit utilisation** | Of the revolving credit available to you (think credit-card limits), what percent are you already using. 85% means you are nearly maxed out |
+| **EMI (equated monthly instalment)** | The fixed amount paid every month. What actually breaks a borrower is not loan size but whether the EMI fits the monthly budget |
+| **Secured / unsecured** | Secured loans have collateral the lender can seize (a house, a car); unsecured ones do not |
+| **Exposure** | How much money the lender has at risk on this loan |
+| **LGD (loss given default)** | If a borrower defaults, what fraction of the exposure do you actually lose after recovering collateral. We assume 60% |
+| **PD (probability of default)** | The number this model outputs |
+| **Expected loss** | `PD × LGD × exposure`. This is why the PD must be a real probability, not just a ranking |
+| **Scorecard** | The industry word for a credit risk model, from the era when it was a literal table of points |
+| **Adverse-action notice** | The legally required letter telling a declined applicant *why* they were declined. "The model said no" is not a lawful reason |
+| **Reject inference** | The problem that declined applicants never produce an outcome, so future training data only contains people you approved |
+
+**Tooling terms** (each is explained properly where it is used later)
+
+| Term | Plain meaning |
+|---|---|
+| **SHAP** | A method that splits a single prediction into one number per feature, showing how much each pushed the answer up or down. See §12.5 |
+| **API (application programming interface)** | A way for other programs to ask your program a question over the network. See §14 |
+| **FastAPI** | The Python library we use to build that. **Pydantic** is the part that checks incoming data is valid |
+| **uvicorn** | The program that actually listens on the network port and hands requests to FastAPI |
+| **Docker** | Packages the code *and* its entire environment into one shippable unit, so it runs identically everywhere. An **image** is the recipe; a **container** is a running copy |
+| **CI (continuous integration)** | A robot that runs your tests automatically on every push, so a broken change is caught before it reaches production |
+| **KS, PSI, Gini, Brier, ECE** | Metrics. All defined with our actual numbers in §9 |
+| **Log-odds** | Probabilities live between 0 and 1, which is awkward for adding things up. Log-odds stretch that onto the whole number line: `log(p / (1 − p))`. 0 log-odds = 50%, negative = less likely, positive = more likely. Gradient boosting and SHAP both work in log-odds and convert back at the end |
+| **Sigmoid** | The function that converts log-odds back into a probability. It is the inverse of the line above |
+
+### 0.2 Meet applicant C26424
+
+Abstract explanations of a pipeline are hard to hold onto. So one real person from the
+test set is followed through this entire document — from their row in the CSV to the JSON
+that comes back from the live API.
+
+They are a good example because **the model declined them, and they did in fact default.**
+
+**Their raw record** (`cust_id: C26424`, `loan_id: L26424`, loan disbursed 2022-03-15,
+Jaipur):
+
+| Field | Value | Field | Value |
+|---|---|---|---|
+| age | 24 | loan_purpose | Education |
+| income | ₹380,000/yr | loan_type | Secured |
+| dependants | 1 | sanction_amount | ₹796,000 |
+| marital_status | Single | loan_amount | ₹683,000 |
+| employment_status | Salaried | loan_tenure_months | 51 |
+| residence_type | Owned | bank_balance | ₹113,045 |
+| years_at_address | 17 | open / closed accounts | 1 / 1 |
+| **credit_utilization_ratio** | **85%** | total_loan_months | 60 |
+| **delinquent_months** | **9** | total_dpd | 40 |
+| enquiry_count | 1 | **actual outcome** | **defaulted** |
+
+Note what is *not* in that list: their gender (F), their city, and their `zipcode` are in the
+raw data but are deliberately never shown to the model (§4). Neither is
+`principal_outstanding`, because it would not exist yet at the moment of the decision (§11).
+
+**The four numbers that matter about them**, each derived in the section shown:
+
+| Stage | Value | Where |
+|---|---|---|
+| Engineered features | `credit_utilization_ratio` 85, `delinquency_ratio` 0.15, `loan_to_income` 1.80 | §4 |
+| Raw XGBoost output | **0.7527** | §12.5 |
+| After calibration | **0.3571** | §10 |
+| Score / rating / decision | **686 · Good · decline** | §13 |
+
+That the raw model says 75% and the calibrated model says 36% is not a bug — it is the
+entire reason calibration exists, and §10 explains it.
 
 ---
 
@@ -166,6 +249,30 @@ Pass-through: `loan_tenure_months` (exposure duration), `total_loan_months` (his
 length), `age`, `years_at_current_address` (residential stability),
 `number_of_dependants`. One-hot: `marital_status`, `employment_status`, `residence_type`,
 `loan_purpose`, `loan_type`.
+
+### The same features, computed for C26424
+
+Abstract feature lists are hard to hold onto, so here is what those 22 features actually
+become for our worked applicant (income ₹380,000, loan ₹683,000, 9 delinquent months out
+of 60, 85% utilisation):
+
+| Feature | Value | What it says about them |
+|---|---|---|
+| `loan_to_income` | **1.80** | Borrowing 1.8× annual income — meaningful but not extreme |
+| `emi_to_monthly_income` | **0.42** | 42% of monthly income goes to this instalment. Tight |
+| `loan_to_sanction` | 0.86 | Drew most, not all, of the approved limit |
+| `balance_to_loan` | 0.17 | Savings cover only a sixth of the loan |
+| `months_of_income_in_bank` | 3.57 | About 3.5 months of income as cushion |
+| `income_per_dependant` | 190,000 | ₹380k supporting two people |
+| `delinquency_ratio` | **0.15** | Late in 15% of all months they have held credit |
+| `avg_dpd_per_delinquency` | 4.44 | When late, about 4 days late — chronic, not catastrophic |
+| `credit_utilization_ratio` | **85** | Nearly maxed out. The dominant risk signal |
+| `open_account_ratio` | 0.50 | One open, one closed |
+| `total_accounts` | 2 | A thin credit file |
+
+The story the features tell: a young borrower with a thin file, a tight monthly budget, and
+— decisively — very high utilisation combined with chronic lateness. §12.5 shows the model
+weighing exactly these against each other.
 
 ### The divide-by-zero guard is not a detail
 
@@ -323,16 +430,16 @@ Actual numbers are from the test set (7,499 loans, 8.59% base rate).
 
 | Metric | Plain definition | Mine | "Good" in credit risk |
 |---|---|---|---|
-| **ROC-AUC** | Take a random defaulter and a random repayer. The chance the model scores the defaulter riskier | **0.9885** | 0.70–0.80 is a solid production scorecard. Mine is unrealistically high — see §12 |
-| **PR-AUC** | Area under precision–recall. The honest headline when only 8.6% are positive, because ROC-AUC is flattered by the huge number of easy negatives | **0.8862** | Compare to the base rate: a useless model scores 0.086 |
-| **Gini** | `2 × AUC − 1`. Same information, different scale — the number credit teams actually quote | **0.9771** | 0.40–0.60 typical |
-| **KS** | Line everyone up by risk. The biggest gap between "% of bad loans caught so far" and "% of good loans caught so far" | **90.30** | **30–40 is healthy.** Above 60 in production almost always means leakage — which is why I investigated (§12) |
-| **Brier** | Mean squared error of the probabilities. Unlike AUC it punishes a model that ranks well but is badly calibrated | **0.0240** | Lower is better; compare against the base-rate-only score of 0.0785 |
-| **ECE** | Average gap between predicted probability and observed frequency. Isolates calibration from discrimination | **0.0063** | Under 0.01 is well calibrated |
+| **ROC-AUC** (receiver operating characteristic — area under curve) | Take a random defaulter and a random repayer. The chance the model scores the defaulter riskier | **0.9885** | 0.70–0.80 is a solid production scorecard. Mine is unrealistically high — see §12 |
+| **PR-AUC** (precision–recall area under curve) | Area under precision–recall. The honest headline when only 8.6% are positive, because ROC-AUC is flattered by the huge number of easy negatives | **0.8862** | Compare to the base rate: a useless model scores 0.086 |
+| **Gini coefficient** | `2 × AUC − 1`. Same information, different scale — the number credit teams actually quote | **0.9771** | 0.40–0.60 typical |
+| **KS (Kolmogorov–Smirnov)** | Line everyone up by risk. The biggest gap between "% of bad loans caught so far" and "% of good loans caught so far" | **90.30** | **30–40 is healthy.** Above 60 in production almost always means leakage — which is why I investigated (§12) |
+| **Brier score** | Mean squared error of the probabilities. Unlike AUC it punishes a model that ranks well but is badly calibrated | **0.0240** | Lower is better; compare against the base-rate-only score of 0.0785 |
+| **ECE (expected calibration error)** | Average gap between predicted probability and observed frequency. Isolates calibration from discrimination | **0.0063** | Under 0.01 is well calibrated |
 | **Precision** | Of those we declined, what share would actually have defaulted | **58.16%** | Trades off against recall |
 | **Recall** | Of all defaulters, what share did we catch | **96.27%** | The one that matters most when FN costs 10× FP |
 | **F1** | Harmonic mean of precision and recall | **0.7251** | Rarely the right objective in lending — it implicitly assumes FP and FN cost the same |
-| **PSI** | How far a feature's distribution has moved from training | **0.0036** max | <0.10 stable, 0.10–0.25 watch, >0.25 retrain |
+| **PSI (population stability index)** | How far a feature's distribution has moved from training | **0.0036** max | <0.10 stable, 0.10–0.25 watch, >0.25 retrain |
 
 **The decile table** is the one a credit committee always asks for. Split the book into ten
 equal groups by predicted risk and show the *actual* default rate in each:
@@ -457,6 +564,130 @@ have you find it."
 
 ---
 
+## 12.5 SHAP, from zero — and applicant C26424's explanation
+
+### The problem it solves
+
+Our model is roughly 400 decision trees stacked on top of each other. Nobody can read
+that. But a declined applicant is legally owed a specific reason (an **adverse-action
+notice**), and "the model said no" is not a lawful answer. That gap is why SHAP exists.
+
+**SHAP (SHapley Additive exPlanations)** takes one prediction and splits it into one
+number per feature: how much did *this* feature push *this* applicant's score up or down.
+
+### The idea, by analogy
+
+Imagine four people work together and earn a ₹1,000 bonus. How much did each contribute?
+
+The fair way: check what happens when each person joins the team — but the answer depends
+on the order they join, because contributions overlap. So you average each person's
+marginal contribution **over every possible joining order**. That average is that person's
+**Shapley value**. It comes from cooperative game theory in the 1950s, and it is the only
+way to split credit that satisfies a short list of obvious fairness properties.
+
+Now swap the words. The "team" is the set of feature values for one applicant. The
+"bonus" is the gap between the model's average prediction and this applicant's prediction.
+Each feature's Shapley value is its fair share of that gap.
+
+### The one equation
+
+For a single prediction:
+
+```
+prediction  =  base_value  +  Σ (SHAP value of each feature)
+```
+
+- **`prediction`** — the model's output for this applicant, in log-odds
+- **`base_value`** — what the model predicts knowing nothing about anyone; the average
+- **`SHAP value`** — one signed number per feature. Positive pushes toward default
+
+This is the **additivity** property, and it is what makes SHAP trustworthy rather than a
+heuristic: the parts are guaranteed to sum exactly to the whole.
+
+### Additivity, verified on C26424
+
+Not asserted — computed. Their top contributions, in log-odds:
+
+| Feature | Their value | SHAP | Reading |
+|---|---|---|---|
+| `credit_utilization_ratio` | 85 | **+1.9029** | 85% utilisation is the single biggest reason they look risky |
+| `residence_type_Owned` | 1 | **−1.0528** | They own their home — the strongest point in their favour |
+| `enquiry_count` | 1 | **−0.9503** | Only one credit enquiry; not shopping desperately for credit |
+| `residence_type_Rented` | 0 | −0.6038 | Not renting, which also helps |
+| `loan_tenure_months` | 51 | +0.4995 | A long loan means longer exposure |
+| `age` | 24 | +0.3180 | Young, so a thin track record |
+| `income_per_dependant` | 190,000 | +0.2551 | Supporting someone on a modest income |
+| `loan_purpose_Education` | 1 | +0.2543 | Education loans default more than auto or personal |
+
+Now add it up:
+
+```
+base value                    =  0.3838
+sum of ALL SHAP values        = +0.7292
+                                -------
+total (log-odds)              =  1.1130
+sigmoid(1.1130)               =  0.752681   ← converts log-odds to probability
+what the model actually says  =  0.752682
+```
+
+**The parts sum to the whole, to six decimal places.** That is additivity, on our data.
+
+### How to read each plot we generate
+
+**`shap_global_importance.png` — the bar plot.** One bar per feature, length = the average
+of `|SHAP|` across 2,000 test applicants. It answers "what does this model rely on
+overall?" It says nothing about *direction* — only magnitude. Ours: utilisation 4.94,
+delinquency 2.30, loan-to-income 1.43.
+
+**`shap_beeswarm.png` — the beeswarm.** Richer, and worth learning to read:
+- **One dot = one applicant, for one feature.** Thousands of dots per row.
+- **x-axis = that applicant's SHAP value.** Right of centre pushed toward default, left
+  pushed toward repayment.
+- **Colour = the feature's actual value.** Red is high, blue is low.
+- **Rows** are ordered by overall importance.
+
+So a row where red dots sit on the right and blue on the left means "high values of this
+feature increase risk" — which is exactly what the `credit_utilization_ratio` row shows,
+and it is a monotone relationship you can verify by eye.
+
+**`shap_force_*.png` — the force plot.** One applicant. Arrows push left (toward repayment)
+and right (toward default) from the base value, each sized by its SHAP value, meeting at
+the final prediction. It is the picture of the table above.
+
+### From SHAP to an adverse-action sentence
+
+This is the practical payoff. C26424's largest positive SHAP value is
+`credit_utilization_ratio` at +1.90. Translated into a lawful, specific reason:
+
+> "Your credit utilisation is 85%, compared with an average of 37% among the applicants we
+> approve. You have also been late on payments in 9 of the last 60 months."
+
+Specific, quantified, actionable — and traceable to a number in the model rather than to
+someone's judgement.
+
+### TreeSHAP vs KernelSHAP
+
+Computing exact Shapley values means evaluating every subset of features — 2²² subsets
+here, which is impossible. Two approximations exist:
+
+- **KernelSHAP** — model-agnostic, works on anything, slow.
+- **TreeSHAP** — exploits the structure of decision trees to compute exact values in
+  polynomial time. Only works on tree models. **This is what we use**, and it is fast
+  enough that explanations could be generated per request if the API needed them.
+
+### The honest limits — raise these before an interviewer does
+
+1. **SHAP shows the model's reasoning, not the world's causality.** It says utilisation
+   drove *this prediction*, not that lowering utilisation would prevent default.
+2. **Correlated features split credit arbitrarily.** `residence_type_Owned` (−1.05) and
+   `residence_type_Rented` (−0.60) are two encodings of one fact; the split between them
+   is an artefact of the encoding.
+3. **A compliance team will ask you to defend SHAP itself** — it is an approximation with
+   assumptions. That is one of the real arguments for shipping a linear scorecard, where
+   the reasons fall straight out of the coefficients (§5).
+
+---
+
 ## 13. Threshold selection
 
 **Why not 0.5.** 0.5 is correct only if a missed defaulter and a wrongly-declined customer
@@ -483,6 +714,17 @@ The naive threshold approves 6.8 points more of the book but **misses 171 defaul
 of 24**. Under the stated costs the extra margin on those approvals nowhere near covers 147
 additional defaults.
 
+**C26424 at this threshold.** Their calibrated PD is 0.3571, comfortably above 0.080, so
+the recommendation is **decline**. Their credit score is `300 + (1 − 0.3571) × 600` = **686**,
+which lands in the "Good" band.
+
+"Good" and "decline" in the same response looks odd until you see they answer different
+questions: the *band* describes them against the whole population (686 really is better
+than most), while the *decision* compares their 35.7% chance of default against a cut-off
+set at 8%. They defaulted, so the decline was correct — and at the naive 0.5 threshold the
+model would have **approved** them, because 0.3571 < 0.5. That single applicant is the
+threshold argument in miniature.
+
 **Be ready to defend the numbers themselves.** 60% and 6% are assumptions, not measurements
 — I do not have recovery data or a pricing sheet. The *ratio* is what drives the threshold,
 and I would replace both with the lender's actual LGD and margin on day one. The framework
@@ -491,6 +733,131 @@ is the deliverable; the constants are placeholders.
 ---
 
 ## 14. Serving architecture
+
+### 14.0 First, why a web service at all?
+
+You have `model.joblib` on disk. You could load it in Python and call
+`model.predict_proba()`. So why put a web server in front of it?
+
+Because **the thing that needs the prediction is usually not Python, and usually not on
+your machine.** A loan-origination system written in Java, a mobile app, an internal
+dashboard — none of them can `import` your pipeline. What they *can* all do is send a
+message over the network.
+
+The vocabulary, defined once:
+
+- **API (application programming interface)** — a contract letting one program ask another
+  a question. Ours accepts an applicant and returns a risk assessment.
+- **HTTP request / response** — the message format of the web. You send a request; you get
+  exactly one response back.
+- **POST vs GET** — `GET` fetches something (`GET /health`). `POST` sends data for
+  processing (`POST /predict`). Scoring is a POST because the applicant's details travel in
+  the request **body**.
+- **JSON** — the text format for that body. `{"age": 24, "income": 380000, ...}`.
+- **Status code** — a number saying what happened. `200` fine, `422` your input was
+  invalid, `500` the server broke, `503` not ready.
+
+The distinction that matters most here: **`422` versus `500`.** A 422 means we looked at
+your data and it was wrong — that is the API working correctly. A 500 means we crashed.
+Turning would-be 500s into 422s is most of what `schemas.py` is for.
+
+**FastAPI** is the Python library that turns functions into endpoints. **Pydantic** is the
+part that validates incoming JSON against a typed schema *before* your code runs.
+**uvicorn** is the program that actually listens on the network port and hands requests to
+FastAPI. Written on one line: uvicorn listens, FastAPI routes, Pydantic validates, our
+pipeline scores.
+
+### 14.1 C26424's request, end to end
+
+Following one applicant through every layer:
+
+```bash
+curl -X POST https://credit-risk-api-1dbj.onrender.com/predict \
+  -H 'Content-Type: application/json' \
+  -d '{"age":24,"income":380000, ... ,"credit_utilization_ratio":85}'
+```
+
+1. **The network.** The JSON travels to Render over HTTPS.
+2. **uvicorn** accepts the connection and hands the request to FastAPI.
+3. **Middleware** stamps a request id and starts a latency timer.
+4. **Routing.** FastAPI matches `POST /predict` to the `predict()` function.
+5. **Pydantic validates.** Age is between 18 and 100 ✓, utilisation 0–100 ✓,
+   `loan_amount ≤ sanction_amount` ✓, `delinquent_months ≤ total_loan_months` ✓. Any
+   failure and the journey stops here with a 422 — the model is never reached.
+6. **`_score()`** builds a one-row DataFrame in the exact column order the pipeline expects.
+7. **Inside the pipeline:** `build_features` turns 20 raw fields into 22 features
+   (utilisation 85, `delinquency_ratio` 0.15, `loan_to_income` 1.80) → one-hot encoding
+   makes 31 columns → **XGBoost outputs 0.7527** → **isotonic calibration corrects it to
+   0.3571**.
+8. **Score mapping.** `300 + (1 − 0.3571) × 600` = **686**, which falls in the "Good" band.
+9. **Decision.** 0.3571 ≥ 0.08, so **decline**.
+10. **Response** (this is the real output):
+    ```json
+    {"probability_of_default":0.357143,"credit_score":686,"rating":"Good",
+     "decision":"decline","threshold":0.08,"model_version":"1.0.0"}
+    ```
+11. **The log line** it produced, visible in Render's dashboard:
+    ```json
+    {"event":"request","request_id":"70703ddf","method":"POST","path":"/predict","status":200,"latency_ms":0.66}
+    ```
+
+Note step 9 against step 8: **"Good" and "decline" together is not a contradiction.** The
+rating describes them against the whole population; the decision compares their 35.7% PD
+against our 8% cut-off. And they did default, so the decline was right.
+
+### 14.2 Docker and hosting, from zero
+
+**The problem Docker solves** is "it works on my machine". Your laptop has Python 3.11,
+specific library versions, and a system OpenMP library that XGBoost needs. A server has
+something else. **Docker packages the code and the entire environment together** so it runs
+identically anywhere.
+
+- An **image** is the recipe plus all ingredients — built once, frozen.
+- A **container** is a running copy of an image. One image, many containers.
+- The **Dockerfile** is the instructions for building the image.
+
+Ours is a **two-stage build**: the first stage has the compilers needed to install
+packages, the second copies only the *installed result*. The build toolchain never ships,
+which makes the image smaller and reduces the amount of code exposed on a public service.
+It also installs `libgomp1` explicitly, because XGBoost loads it at runtime and the failure
+otherwise is a baffling error rather than a clear "missing package" message.
+
+It runs as a **non-root user** (`uid 10001`): if the process is ever compromised, it should
+not own the filesystem.
+
+**What Render gives you:** a machine, a public HTTPS URL, automatic restarts, and logs —
+without you administering a server. It watches the GitHub repo and rebuilds on every push
+(`autoDeploy: true`). A **health check** is Render periodically calling `/health`; if that
+stops returning 200, it restarts the container. This is exactly why the app refuses to boot
+without a model file — a container that can never serve a valid request must never report
+itself healthy.
+
+**Cold starts:** on the free tier the instance sleeps after 15 minutes idle, so the first
+request takes 30–50 seconds. Worth knowing before you demo it live in an interview — open
+the URL a minute beforehand to wake it.
+
+### 14.3 CI, from zero
+
+**Continuous integration (CI)** is a robot that runs your tests on every push, so a broken
+change is caught before it reaches production instead of after.
+
+- **Workflow** — the whole automated process, defined in `.github/workflows/ci.yml`
+- **Trigger** — what starts it. Ours: any push or pull request to `main`
+- **Runner** — the fresh virtual machine GitHub gives you. Fresh matters: it proves the
+  project builds from nothing, not just on a laptop with the right things already installed
+- **Job** — an independent unit of work. Ours has two: *lint and test*, then *build and
+  smoke-test the image*
+- **Step** — one command inside a job
+
+**"The build is red"** means a step failed. Click the run, open the failed step, read the
+log from the bottom. Red means do not deploy until it is green.
+
+Our CI does something quietly valuable: the runner is Linux/x86 while development was on an
+arm64 Mac, so a green build also proves the pinned dependencies and the model artifact work
+on the deployment architecture — not just on the machine that produced them.
+
+### 14.4 The architecture decisions themselves
+
 
 **One artifact.** `models/model.joblib` is a complete sklearn `Pipeline`:
 
@@ -600,7 +967,10 @@ unbiased labels, or apply a formal reject-inference method. Not implemented here
    Its SHAP importance is 13th of 31, so the cost is small.
 4. **Reject-inference design**, before the first retraining cycle bakes in the bias.
 5. **A proper EMI** using the actual interest rate rather than principal/tenure.
-6. **Prediction intervals**, via conformal prediction or a quantile ensemble.
+6. **Prediction intervals** — a range rather than a single number, so the model can say
+   "between 30% and 41%" instead of "35.7%". Via conformal prediction (a method that
+   turns any model's errors on held-out data into calibrated intervals) or a quantile
+   ensemble.
 7. **Champion/challenger in production** — ship the logistic scorecard for decisioning and
    run XGBoost alongside to find what the linear model misses.
 
@@ -843,8 +1213,9 @@ single highest-value change here is not a modelling one, because no amount of tu
 synthetic target.
 
 I would also compute a proper EMI using the actual interest rate rather than
-principal-over-tenure, and add prediction intervals via conformal prediction so the service
-can say how confident it is, not just what it thinks.
+principal-over-tenure, and add prediction intervals — conformal prediction turns a model's
+errors on held-out data into an honest range — so the service can say how confident it is,
+not just what it thinks.
 
 ---
 
