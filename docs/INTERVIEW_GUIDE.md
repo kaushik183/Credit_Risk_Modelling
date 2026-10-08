@@ -568,7 +568,7 @@ have you find it."
 
 ### The problem it solves
 
-Our model is roughly 400 decision trees stacked on top of each other. Nobody can read
+Our model is 612 decision trees stacked on top of each other. Nobody can read
 that. But a declined applicant is legally owed a specific reason (an **adverse-action
 notice**), and "the model said no" is not a lawful answer. That gap is why SHAP exists.
 

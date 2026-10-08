@@ -5,6 +5,11 @@ decision in it. That is a normal situation and it is solvable, because **the rea
 this project is real and it is all written down.** The job is to load it into your head in
 the right order.
 
+**Prefer one document to six?** [`COMPLETE_REFERENCE.md`](COMPLETE_REFERENCE.md) covers
+everything below in a single ~10,000-word pass: concepts from zero, every file and function,
+every number traced, and one applicant followed end to end. Use this reading order instead
+if you would rather absorb it in sequenced pieces with checkpoints.
+
 Total reading: **~135 minutes.** Add the exercises and it is a focused half-day.
 
 ---

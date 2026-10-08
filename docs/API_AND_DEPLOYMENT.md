@@ -787,7 +787,8 @@ timer.
 - `build_features` → 20 raw fields become 22 features. Utilisation 85, `delinquency_ratio`
   0.15, `loan_to_income` 1.80, `emi_to_monthly_income` 0.42.
 - `ColumnTransformer` → one-hot encoding expands 5 categoricals into 31 total columns.
-- `XGBClassifier` → ~400 trees vote. **Raw output: 0.7527.**
+- `XGBClassifier` → 612 trees vote (early stopping halted at iteration 612 of a
+  1,200 ceiling). **Raw output: 0.7527.**
 - `CalibratedClassifierCV` (isotonic) → **corrected to 0.3571.** The raw model over-states
   risk; calibration is what makes the number mean what it says.
 

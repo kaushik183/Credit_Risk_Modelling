@@ -599,9 +599,13 @@ returns a probability.
 
 ## Documentation
 
-- **[`docs/START_HERE.md`](docs/START_HERE.md)** — **read this first.** A numbered order
-  for everything below, with time estimates, a 20-minute crash path, and 15 self-test
-  questions. Written for picking the project back up cold.
+- **[`docs/COMPLETE_REFERENCE.md`](docs/COMPLETE_REFERENCE.md)** — **the single source.**
+  Every concept from zero, every file and function explained, every number traced to where
+  it came from, and one applicant followed from CSV row to live HTTP response. ~10,000
+  words; if you read one document, read this one.
+- **[`docs/START_HERE.md`](docs/START_HERE.md)** — a sequenced reading order if you prefer
+  to work through the docs in pieces.
+  Includes time estimates, a 20-minute crash path, and 15 self-test questions.
 - **[`docs/INTERVIEW_GUIDE.md`](docs/INTERVIEW_GUIDE.md)** — the full walkthrough: how
   gradient boosting works in plain words, every hyperparameter and which way it pushes
   bias/variance, every metric defined with the actual number, the leakage story, ~20
