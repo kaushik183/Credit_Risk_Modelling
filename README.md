@@ -599,7 +599,11 @@ returns a probability.
 
 ## Documentation
 
-- **[`docs/COMPLETE_REFERENCE.md`](docs/COMPLETE_REFERENCE.md)** — **the single source.**
+- **[`docs/ESSENTIALS.md`](docs/ESSENTIALS.md)** — **start here.** The whole project in
+  ~3,000 plain-English words: what it does, the four ideas behind it, the data problems, the
+  model, one applicant followed end to end, and what to say in an interview. Renders to a
+  9-page PDF.
+- **[`docs/COMPLETE_REFERENCE.md`](docs/COMPLETE_REFERENCE.md)** — the deep version.
   Every concept from zero, every file and function explained, every number traced to where
   it came from, and one applicant followed from CSV row to live HTTP response. ~10,000
   words; if you read one document, read this one.
