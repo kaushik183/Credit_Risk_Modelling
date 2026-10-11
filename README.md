@@ -1,6 +1,8 @@
 # Credit Default Risk Model
 
-**Live API: [https://credit-risk-api-1dbj.onrender.com/docs](https://credit-risk-api-1dbj.onrender.com/docs)**
+**Live demo: [https://credit-risk-api-1dbj.onrender.com](https://credit-risk-api-1dbj.onrender.com)** · API docs: [/docs](https://credit-risk-api-1dbj.onrender.com/docs)
+
+![Scoring UI: a loan application form on the left, the 300-900 score gauge and approve/decline decision on the right](docs/ui.png)
 
 An end-to-end credit scorecard: it takes a loan application, and returns the probability
 that the borrower will default, a 300–900 credit score, and an approve/decline
@@ -170,6 +172,7 @@ src/
 api/
   main.py        FastAPI app, lifespan model loading, structured logging
   schemas.py     Pydantic v2 request/response models
+  static/        the scoring UI (index.html, app.js, styles.css) - plain HTML/JS, no build step
 models/
   model.joblib   the full pipeline: raw fields -> features -> encode -> XGB -> calibration
   metadata.json  version, date, features, every metric, the prediction fixture
@@ -199,7 +202,7 @@ brew install libomp
 
 python -m src.train              # ~3 minutes, writes models/ and reports/
 pytest tests/ -q                 # 65 tests
-uvicorn api.main:app --reload    # http://localhost:8000/docs
+uvicorn api.main:app --reload    # UI at http://localhost:8000, API docs at /docs
 
 jupyter lab notebooks/           # optional: the EDA notebook
 ```
@@ -214,6 +217,20 @@ Everything is seeded (`config.RANDOM_SEED = 42`) and reproduces exactly run to r
 ## API
 
 Interactive docs at `/docs`. All examples below are **real, copy-pasteable responses**.
+
+### `GET /` - the scoring UI
+
+A browser front end served from `api/static/`. It is just another API client: it builds the
+request from a form, calls `POST /predict`, and reads `GET /model/info` for the cut-off and the
+headline metrics. It adds no scoring logic of its own, so the UI cannot disagree with the API.
+
+- Form fields and limits mirror `api/schemas.py`, including the four cross-field rules, so
+  bad input is flagged before the request is sent (the API still validates everything).
+- Example buttons load the same applicants as `tests/fixtures/`.
+- After the first score, every edit re-scores automatically (debounced), which makes it easy to
+  see how one field moves the probability.
+- The gauge marks the approval line: the score is linear in `1 - PD`, so the 8% cut-off sits at
+  a score of 852. A "Good" (650-750) applicant can therefore still be declined.
 
 ### `POST /predict`
 

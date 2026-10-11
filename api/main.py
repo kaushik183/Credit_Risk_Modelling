@@ -23,12 +23,14 @@ import sys
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import joblib
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from src import config
 from src.evaluate import clip_pd, pd_to_credit_score, score_to_rating
@@ -47,6 +49,10 @@ logger = logging.getLogger("api")
 
 # Populated at startup by the lifespan handler.
 ARTIFACTS: dict[str, Any] = {"model": None, "metadata": {}, "threshold": 0.5, "started_at": time.time()}
+
+# The browser UI (index.html, app.js, styles.css). It calls the same /predict and
+# /model/info endpoints as any other client, so it adds no scoring logic of its own.
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 @asynccontextmanager
@@ -92,6 +98,7 @@ app = FastAPI(
     version=config.MODEL_VERSION,
     lifespan=lifespan,
 )
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Import after `app` exists to keep the module import graph obvious.
 from api.schemas import (  # noqa: E402
@@ -173,13 +180,9 @@ def _score(applicants: list[ApplicantRequest]) -> list[PredictionResponse]:
 
 
 @app.get("/", include_in_schema=False)
-async def root() -> dict[str, str]:
-    return {
-        "service": "Credit Default Risk API",
-        "version": config.MODEL_VERSION,
-        "docs": "/docs",
-        "health": "/health",
-    }
+async def root() -> FileResponse:
+    """The scoring UI. API clients want /docs, /predict and /health instead."""
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health", response_model=HealthResponse, tags=["ops"])
